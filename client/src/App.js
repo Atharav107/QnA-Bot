@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 import { FaLightbulb, FaMoon, FaPaperPlane, FaTrash, FaHistory, FaSave, 
-         FaMicrophone, FaMicrophoneAlt, FaVolumeUp, FaVolumeMute, FaStop, FaCog } from 'react-icons/fa';
+         FaMicrophone, FaMicrophoneAlt, FaVolumeUp, FaVolumeMute, FaStop, FaCog, FaDatabase } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import useSpeechRecognition from './hooks/useSpeechRecognition';
 import useTextToSpeech from './hooks/useTextToSpeech';
+import KnowledgeBase from './components/KnowledgeBase';
 
 function App() {
   const [question, setQuestion] = useState('');
@@ -15,6 +16,8 @@ function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [savedConversations, setSavedConversations] = useState([]);
   const [showVoiceSettings, setShowVoiceSettings] = useState(false);
+  const [showKnowledgeBase, setShowKnowledgeBase] = useState(false);
+  const [usingKnowledgeBase, setUsingKnowledgeBase] = useState(false);
   
   // Store the conversation ID for the current active conversation
   const [activeConversationId, setActiveConversationId] = useState(null);
@@ -140,11 +143,15 @@ function App() {
       
       const data = await response.json();
       
+      // Check if knowledge base was used
+      setUsingKnowledgeBase(data.usedKnowledgeBase);
+      
       // Add assistant response to conversation
       const assistantResponse = { 
         role: 'assistant', 
         content: data.answer, 
-        timestamp: new Date().toISOString() 
+        timestamp: new Date().toISOString(),
+        usedKnowledgeBase: data.usedKnowledgeBase
       };
       
       setConversations(prev => [...prev, assistantResponse]);
@@ -248,6 +255,13 @@ function App() {
             >
               {darkMode ? <FaLightbulb /> : <FaMoon />}
             </button>
+            <button 
+              className="icon-button knowledge-base-button" 
+              onClick={() => setShowKnowledgeBase(true)}
+              title="Knowledge Base"
+            >
+              <FaDatabase />
+            </button>
           </div>
         </div>
       </header>
@@ -347,6 +361,12 @@ function App() {
                         <div className="message-content">
                           {msg.content}
                         </div>
+                        
+                        {msg.usedKnowledgeBase && (
+                          <div className="knowledge-base-badge">
+                            <FaDatabase /> Using Knowledge Base
+                          </div>
+                        )}
                       </motion.div>
                     ))}
                   </AnimatePresence>
@@ -513,6 +533,11 @@ function App() {
           )}
         </main>
       </div>
+      
+      <KnowledgeBase 
+        isOpen={showKnowledgeBase} 
+        onClose={() => setShowKnowledgeBase(false)} 
+      />
     </div>
   );
 }
