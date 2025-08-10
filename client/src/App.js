@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
-import { FaLightbulb, FaMoon, FaPaperPlane, FaTrash, FaHistory, FaSave } from 'react-icons/fa';
+import { FaLightbulb, FaMoon, FaPaperPlane, FaTrash, FaHistory, FaSave, 
+         FaMicrophone, FaMicrophoneAlt, FaVolumeUp, FaVolumeMute, FaStop, FaCog } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
+import useSpeechRecognition from './hooks/useSpeechRecognition';
+import useTextToSpeech from './hooks/useTextToSpeech';
 
 function App() {
   const [question, setQuestion] = useState('');
@@ -11,12 +14,37 @@ function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [savedConversations, setSavedConversations] = useState([]);
+  const [showVoiceSettings, setShowVoiceSettings] = useState(false);
   
   // Store the conversation ID for the current active conversation
   const [activeConversationId, setActiveConversationId] = useState(null);
   
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  
+  // Voice hooks
+  const { 
+    transcript, 
+    isListening, 
+    toggleListening, 
+    stopListening, 
+    resetTranscript,
+    browserSupportsRecognition 
+  } = useSpeechRecognition();
+  
+  const {
+    isSpeaking,
+    voices,
+    selectedVoice,
+    rate,
+    pitch,
+    speakText,
+    stopSpeaking,
+    changeVoice,
+    changeRate,
+    changePitch,
+    browserSupportsSpeech
+  } = useTextToSpeech();
   
   // Load saved conversations from localStorage
   useEffect(() => {
@@ -53,11 +81,27 @@ function App() {
   useEffect(() => {
     document.body.className = darkMode ? 'dark-mode' : 'light-mode';
   }, [darkMode]);
+  
+  // Auto-submit when speech recognition finishes
+  useEffect(() => {
+    if (!isListening && transcript) {
+      setQuestion(transcript);
+      // Submit after a short delay to allow user to see the transcript
+      const timer = setTimeout(() => {
+        handleSubmit({ preventDefault: () => {} });
+      }, 1500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isListening, transcript]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!question.trim()) return;
+    
+    // Stop any ongoing speech when submitting a new question
+    stopSpeaking();
     
     const currentQuestion = question;
     setQuestion('');
@@ -97,15 +141,24 @@ function App() {
       const data = await response.json();
       
       // Add assistant response to conversation
-      setConversations(prev => [
-        ...prev, 
-        { role: 'assistant', content: data.answer, timestamp: new Date().toISOString() }
-      ]);
+      const assistantResponse = { 
+        role: 'assistant', 
+        content: data.answer, 
+        timestamp: new Date().toISOString() 
+      };
+      
+      setConversations(prev => [...prev, assistantResponse]);
+      
+      // Auto-speak the answer if user used voice input
+      if (transcript && browserSupportsSpeech) {
+        speakText(data.answer);
+      }
     } catch (err) {
       setError(err.message);
       console.error('Error:', err);
     } finally {
       setIsLoading(false);
+      resetTranscript();
       // Focus back on input after response
       inputRef.current?.focus();
     }
@@ -158,6 +211,7 @@ function App() {
   };
   
   const clearCurrentConversation = () => {
+    stopSpeaking();
     setConversations([]);
   };
 
@@ -243,6 +297,13 @@ function App() {
                 <h2>Ask me anything!</h2>
                 <p>I'm your AI assistant ready to help answer your questions.</p>
                 <p className="context-hint">I'll remember our conversation context so you can ask follow-up questions!</p>
+                
+                {browserSupportsRecognition && (
+                  <div className="voice-hint">
+                    <FaMicrophone className="voice-icon" />
+                    <p>Try using voice input - click the microphone icon below</p>
+                  </div>
+                )}
               </div>
             ) : (
               <>
@@ -270,6 +331,18 @@ function App() {
                           <span className="message-time">
                             {new Date(msg.timestamp).toLocaleTimeString()}
                           </span>
+                          
+                          {msg.role === 'assistant' && browserSupportsSpeech && (
+                            <div className="message-actions">
+                              <button 
+                                onClick={() => speakText(msg.content)} 
+                                className={`message-action ${isSpeaking ? 'active' : ''}`}
+                                title="Listen"
+                              >
+                                {isSpeaking ? <FaVolumeMute /> : <FaVolumeUp />}
+                              </button>
+                            </div>
+                          )}
                         </div>
                         <div className="message-content">
                           {msg.content}
@@ -291,6 +364,79 @@ function App() {
             )}
           </div>
           
+          {/* Voice settings panel */}
+          <AnimatePresence>
+            {showVoiceSettings && browserSupportsSpeech && (
+              <motion.div 
+                className="voice-settings-panel"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+              >
+                <div className="voice-settings-header">
+                  <h3>Voice Settings</h3>
+                  <button 
+                    onClick={() => setShowVoiceSettings(false)}
+                    className="close-button"
+                  >
+                    &times;
+                  </button>
+                </div>
+                
+                <div className="settings-group">
+                  <label htmlFor="voice-select">Voice:</label>
+                  <select 
+                    id="voice-select"
+                    value={selectedVoice?.name || ''}
+                    onChange={(e) => {
+                      const selected = voices.find(v => v.name === e.target.value);
+                      if (selected) changeVoice(selected);
+                    }}
+                  >
+                    {voices.map(voice => (
+                      <option key={voice.name} value={voice.name}>
+                        {voice.name} ({voice.lang})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="settings-group">
+                  <label htmlFor="rate-range">Speed: {rate.toFixed(1)}x</label>
+                  <input 
+                    id="rate-range"
+                    type="range" 
+                    min="0.5" 
+                    max="2" 
+                    step="0.1" 
+                    value={rate}
+                    onChange={(e) => changeRate(parseFloat(e.target.value))}
+                  />
+                </div>
+                
+                <div className="settings-group">
+                  <label htmlFor="pitch-range">Pitch: {pitch.toFixed(1)}</label>
+                  <input 
+                    id="pitch-range"
+                    type="range" 
+                    min="0.5" 
+                    max="2" 
+                    step="0.1" 
+                    value={pitch}
+                    onChange={(e) => changePitch(parseFloat(e.target.value))}
+                  />
+                </div>
+                
+                <button 
+                  className="test-voice-button"
+                  onClick={() => speakText("This is a test of the selected voice.")}
+                >
+                  Test Voice
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
           {error && (
             <motion.div 
               className="error-message"
@@ -303,27 +449,68 @@ function App() {
           )}
           
           <form onSubmit={handleSubmit} className="question-form">
-            <div className="input-group">
-              <input
-                type="text"
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                placeholder="Ask anything..."
-                disabled={isLoading}
-                className="question-input"
-                ref={inputRef}
-              />
-              <motion.button 
-                type="submit" 
-                disabled={isLoading || !question.trim()}
-                className="submit-button"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <FaPaperPlane /> {isLoading ? 'Thinking...' : 'Ask'}
-              </motion.button>
+            <div className="input-container">
+              <div className="input-group">
+                <input
+                  type="text"
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  placeholder={isListening ? 'Listening...' : 'Ask anything...'}
+                  disabled={isLoading || isListening}
+                  className={`question-input ${isListening ? 'listening' : ''}`}
+                  ref={inputRef}
+                />
+                
+                {browserSupportsRecognition && (
+                  <button
+                    type="button"
+                    onClick={toggleListening}
+                    className={`voice-button ${isListening ? 'listening' : ''}`}
+                    disabled={isLoading}
+                    title={isListening ? 'Stop listening' : 'Start voice input'}
+                  >
+                    {isListening ? <FaMicrophoneAlt /> : <FaMicrophone />}
+                  </button>
+                )}
+                
+                <motion.button 
+                  type="submit" 
+                  disabled={isLoading || (!question.trim() && !transcript)}
+                  className="submit-button"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <FaPaperPlane /> {isLoading ? 'Thinking...' : 'Ask'}
+                </motion.button>
+              </div>
+              
+              {/* Transcript preview */}
+              {isListening && (
+                <div className="transcript-preview">
+                  <div className="listening-indicator">
+                    <div className="wave"></div>
+                    <div className="wave"></div>
+                    <div className="wave"></div>
+                    <div className="wave"></div>
+                    <div className="wave"></div>
+                  </div>
+                  <p>{transcript || "I'm listening..."}</p>
+                </div>
+              )}
             </div>
           </form>
+          
+          {browserSupportsSpeech && (
+            <div className="voice-settings-toggle">
+              <button 
+                onClick={() => setShowVoiceSettings(!showVoiceSettings)}
+                className="icon-button settings-toggle"
+                title="Voice settings"
+              >
+                <FaCog /> Voice Settings
+              </button>
+            </div>
+          )}
         </main>
       </div>
     </div>

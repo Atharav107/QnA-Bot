@@ -540,6 +540,271 @@ body.dark-mode {
   }
 }
 
+/* Voice input button */
+.voice-button {
+  border: none;
+  color: var(--primary-color);
+  background-color: transparent;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: -40px;
+  margin-right: 10px;
+  position: relative;
+  z-index: 2;
+  transition: all 0.3s ease;
+}
+
+.voice-button.listening {
+  color: #e53935;
+  animation: pulse 1.5s infinite;
+}
+
+.question-input.listening {
+  border-color: #e53935;
+  box-shadow: 0 0 0 3px rgba(229, 57, 53, 0.2);
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Transcript preview */
+.transcript-preview {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dark .transcript-preview {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-dark);
+}
+
+/* Listening indicator waves */
+.listening-indicator {
+  display: flex;
+  align-items: flex-end;
+  height: 20px;
+}
+
+.wave {
+  width: 3px;
+  height: 10px;
+  margin: 0 1px;
+  border-radius: 1px;
+  background-color: #e53935;
+  animation: wave 1s ease-in-out infinite;
+}
+
+.wave:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.wave:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+.wave:nth-child(4) {
+  animation-delay: 0.3s;
+}
+
+.wave:nth-child(5) {
+  animation-delay: 0.4s;
+}
+
+@keyframes wave {
+  0%, 100% {
+    height: 5px;
+  }
+  50% {
+    height: 15px;
+  }
+}
+
+/* Voice settings panel */
+.voice-settings-panel {
+  background-color: var(--bg-light);
+  border-radius: var(--border-radius);
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: var(--box-shadow);
+  position: relative;
+}
+
+.dark .voice-settings-panel {
+  background-color: var(--bg-dark);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.voice-settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.voice-settings-header h3 {
+  margin: 0;
+  color: var(--primary-color);
+}
+
+.close-button {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #888;
+}
+
+.dark .close-button {
+  color: #aaa;
+}
+
+.settings-group {
+  margin-bottom: 15px;
+}
+
+.settings-group label {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.settings-group select,
+.settings-group input {
+  width: 100%;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+}
+
+.dark .settings-group select,
+.dark .settings-group input {
+  background-color: var(--card-dark);
+  border-color: #444;
+  color: var(--text-dark);
+}
+
+.test-voice-button {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.dark .test-voice-button {
+  background-color: var(--primary-light);
+}
+
+/* Voice hint in empty state */
+.voice-hint {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: var(--primary-color);
+}
+
+.voice-icon {
+  font-size: 2rem;
+  animation: float 2s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.dark .voice-hint {
+  color: var(--primary-light);
+}
+
+/* Voice settings toggle */
+.voice-settings-toggle {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+
+/* Message action buttons */
+.message-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.message-action {
+  background: transparent;
+  border: none;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  transition: opacity 0.2s;
+}
+
+.message-action:hover {
+  opacity: 1;
+}
+
+.message-action.active {
+  color: var(--primary-color);
+  opacity: 1;
+}
+
+.dark .message-action.active {
+  color: var(--primary-light);
+}
+
+/* Update message header to include actions */
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  margin-bottom: 8px;
+  opacity: 0.8;
+}
+
+/* Fix input container for voice button positioning */
+.input-container {
+  width: 100%;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .content-wrapper {
