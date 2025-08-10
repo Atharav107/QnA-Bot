@@ -1,4 +1,11 @@
 {
+  "name": "qa-assistant",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "nodemon server/server.js"
+  },
   "dependencies": {
     "openai": "^5.12.2"
   }
